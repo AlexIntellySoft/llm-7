@@ -1,0 +1,15 @@
+# окружение
+.venv/
+__pycache__/
+*.py[cod]
+
+# веса адаптеров лежат на Hugging Face Hub, в git только метрики и графики
+outputs/adapter_*/
+*.zip
+
+# кэши, IDE и системный мусор
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store
+*.log
