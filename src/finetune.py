@@ -78,6 +78,11 @@ def train_adapter(
         task_type="CAUSAL_LM",
     )
     model = get_peft_model(model, lora)
+    # С 4-bit загрузкой веса LoRA получают dtype модели из её конфига (у Qwen3 — bfloat16),
+    # а fp16-обучение на T4 (GradScaler) обновляет только fp32-веса
+    for p in model.parameters():
+        if p.requires_grad:
+            p.data = p.data.float()
     model.print_trainable_parameters()
 
     args = SFTConfig(
