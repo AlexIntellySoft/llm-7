@@ -78,11 +78,6 @@ def train_adapter(
         task_type="CAUSAL_LM",
     )
     model = get_peft_model(model, lora)
-    # С 4-bit загрузкой веса LoRA получают dtype модели из её конфига (у Qwen3 — bfloat16),
-    # а fp16-обучение на T4 (GradScaler) обновляет только fp32-веса
-    for p in model.parameters():
-        if p.requires_grad:
-            p.data = p.data.float()
     model.print_trainable_parameters()
 
     args = SFTConfig(
@@ -112,6 +107,13 @@ def train_adapter(
         eval_dataset=to_dataset(eval_rows),
         processing_class=tokenizer,
     )
+    # SFTTrainer для 4-bit модели переводит веса LoRA в bfloat16 (рекомендация QLoRA для
+    # A100/H100), но T4 bf16 не поддерживает, а fp16-обучение (GradScaler) обновляет только
+    # fp32-веса. Возвращаем fp32 до создания оптимизатора
+    for p in trainer.model.parameters():
+        if p.requires_grad:
+            p.data = p.data.float()
+    print("dtype обучаемых весов:", {str(p.dtype) for p in trainer.model.parameters() if p.requires_grad})
     trainer.train()
     trainer.save_model(out_dir)  # сохраняются только веса LoRA (adapter_model.safetensors)
     history = trainer.state.log_history
